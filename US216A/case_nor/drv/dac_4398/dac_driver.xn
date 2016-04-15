@@ -1,0 +1,80 @@
+/*定义GROUP BANK INDEX 和其他地址变量*/
+INPUT(link_base.xn)
+
+/*1.获取card模块的group index，驱动开发人员需选择*/
+BANK_GROUP_INDEX = DRV_GROUP_I2C;
+
+/*2.从地址map图中获取card模块的常驻代码段物理地址，只需写低14位，驱动开发人员需填写，集成开始后只由集成人员修改，驱动人员不允许修改*/
+SRAM_TEXT_ADDR = SRAM_FM_DRV_RCODE_ADDR;
+SRAM_DATA_ADDR = SRAM_AP_BACK_DATA_ADDR + 0x400; /*0x400空间给fm_engine使用*/
+RCODE_TEXT_ADDR = RCODE_ADDR_BASE + SRAM_AP_FRONT_BASAL_RCODE_ADDR;/*SRAM_TEXT_ADDR;*/
+RCODE_SIZE = SRAM_FM_DRV_RCODE_SIZE;
+
+RDATA_DATA_ADDR = RDATA_ADDR_BASE + SRAM_DATA_ADDR;
+FM_DRV_DATA_SIZE = 0x200; /*与fm引擎共用1.5k AP_BACK_DATA数据*/
+/*
+ROM_TEXT_ADDR = RCODE_ADDR_BASE + SROM_TWI_ADDR_MDY;
+ROM_TEXT_SIZE = SROM_TWI_SIZE_MDY;
+*/
+/* I2C有固化代码搬到RAM*/
+RAM_TEXT_ADDR = RCODE_ADDR_BASE + SRAM_TWI_ADDR_MDY;
+RAM_TEXT_SIZE = SRAM_TWI_SIZE_MDY;
+
+KERNEL_BANK_A_ADDR_BASE = (KERNEL_BANK_A << 28) + (BANK_GROUP_INDEX << 24) + SRAM_BANK_A_ADDR;
+KERNEL_BANK_B_ADDR_BASE = (KERNEL_BANK_B << 28) + (BANK_GROUP_INDEX << 24) + SRAM_BANK_B_ADDR;
+
+/*bank的实际空间大小,不能修改*/
+KERNEL_BANK_A_SIZE = SRAM_BANK_A_SIZE;
+KERNEL_BANK_B_SIZE = SRAM_BANK_B_SIZE;
+
+/*输出段开头以4字节对齐， .bss 段总大小减4，防止 .data 段大小不是4整倍时溢出几个字节的情况*/
+FM_DRV_DATA_SIZE_FILL = FM_DRV_DATA_SIZE - 4;
+/*系统允许的bank的最大空间大小，不能修改*/
+KERNEL_BANK_SPACE = BANK_SPACE;
+
+OUTPUT_ARCH(mips)
+ENTRY(dac_drv_op)
+
+SECTIONS
+{
+    
+		.text 0xbfc1e000 :
+    {
+        /*API OBJ在此链接*/
+        sys_op_entry.o(.text)
+				libc_op_entry.o(.text)
+				Rcode_dac_op_entry.o(.text)
+				bank_a_module_init.o(.text)
+				
+				 rom_TWI.o(.text .rodata)
+       	Dac_Op_Wrapper.o(.text)
+       	Dac_Op.o(.text .rodata)
+        . = 0x1000;
+    }
+   
+    .data RDATA_DATA_ADDR :  /*AT(ADDR(.text) + SIZEOF(.text))*/
+    {
+        /*5.填写rdata输入节，所以文件产生的.data都被链接到这里*/
+        *.o(.data)
+    }
+
+    .bss :
+    {
+        *(.bss)
+        *(.sbss)
+        *(.common)
+        *(common)
+        . = FM_DRV_DATA_SIZE_FILL - SIZEOF(.data);
+    }
+    
+    . = KERNEL_BANK_A_ADDR_BASE;
+    OFFSET = . & (KERNEL_BANK_SPACE - 1);
+    BANK_A_0 :
+    {
+
+        . = KERNEL_BANK_A_SIZE;
+    }
+ 
+  
+    
+}
