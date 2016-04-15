@@ -22,7 +22,7 @@
 
 #include "common_ui.h"
 #include "dac_interface.h"
-
+#define DAC_MAX_VOLUME 250
 
 extern void show_volumebar_ui(style_infor_t *style_infor, parambox_private_t *private_data,
         uint8 mode, progress_draw_mode_e progress_draw_mode) __FAR__;
@@ -45,7 +45,16 @@ app_result_e volumebar_msg_deal(param_com_data_t *param_com, int8 timeup_id, uin
 
     private_data = param_com->private_data;
     cur_one = &(private_data->items[private_data->active]);
-
+    int dac_open_flag = -1;
+    if(1 == com_get_config_default(SETTING_AUDIO_OUTPUT_CHANNAL)  &&
+    4 == com_get_config_default(SETTING_AUDIO_INNER_PA_SET_MODE))
+    {
+        dac_open_flag = 1;
+    }
+    else
+    {
+        dac_open_flag = 0;
+    }
     //获取gui消息
     if (get_gui_msg(&input_msg) == TRUE)//有gui消息
     {
@@ -71,35 +80,26 @@ app_result_e volumebar_msg_deal(param_com_data_t *param_com, int8 timeup_id, uin
             {
                 case EVENT_VOLUME_INC:
                 //参数值递增
-                if (mode == SET_VOLUME_LIMIT)
+                if ((mode == SET_VOLUME_LIMIT) ||
+                    (mode == SET_VOLUME_VALUE))
                 {
-                    if (cur_one->value < cur_one->max)
+                    if ((cur_one->value < cur_one->max) &&
+                        (cur_one->value < sys_comval->volume_limit))
                     {
                         cur_one->value += cur_one->step;
                         param_com->draw_mode = PARAMBOX_DRAW_VALUE;
-			libc_print("myprint again", 2, 2);
-			
-			dac_set_volume(5 * (cur_one->value));
-                        com_set_sound_volume((uint8) (cur_one->value));
-                    }
-
+                        if(1 == dac_open_flag)
+                        {
+                            dac_set_volume(DAC_MAX_VOLUME - ( DAC_MAX_VOLUME / (cur_one->max) ) * (cur_one->value));
+                       }
+                       else
+                       {
+                           com_set_sound_volume((uint8) (cur_one->value));
+                       }
+                    } 
                     break;//for QAC，至此case分支结束
                 }
 
-                //至此，说明mode不等于SET_VOLUME_LIMIT ，for QAC ，减少1层控制嵌套
-                if (cur_one->value < sys_comval->volume_limit)
-                {
-                    cur_one->value += cur_one->step;
-                    param_com->draw_mode = PARAMBOX_DRAW_VALUE;
-
-                    if (mode == SET_VOLUME_VALUE)
-                    {
-                    	
-                    	dac_set_volume(5*(cur_one->value));
-                        com_set_sound_volume((uint8) (cur_one->value));
-                    }
-                }
-                break;
 
                 case EVENT_VOLUME_DEC:
                 //参数值递减
@@ -111,8 +111,11 @@ app_result_e volumebar_msg_deal(param_com_data_t *param_com, int8 timeup_id, uin
                     if ((mode == SET_VOLUME_LIMIT) || (mode == SET_VOLUME_VALUE))
                     {
                     	
-                    	dac_set_volume(5*(cur_one->value));
-                        com_set_sound_volume((uint8) (cur_one->value));
+                    	dac_set_volume(DAC_MAX_VOLUME - ( DAC_MAX_VOLUME / (cur_one->max) ) * (cur_one->value));
+                    }
+                    else
+                    {
+                           com_set_sound_volume((uint8) (cur_one->value));
                     }
                 }
                 break;
