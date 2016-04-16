@@ -22,7 +22,8 @@
 
 #include "common_ui.h"
 #include "dac_interface.h"
-#define DAC_MAX_VOLUME 250
+
+
 
 extern void show_volumebar_ui(style_infor_t *style_infor, parambox_private_t *private_data,
         uint8 mode, progress_draw_mode_e progress_draw_mode) __FAR__;
@@ -90,7 +91,9 @@ app_result_e volumebar_msg_deal(param_com_data_t *param_com, int8 timeup_id, uin
                         param_com->draw_mode = PARAMBOX_DRAW_VALUE;
                         if(1 == dac_open_flag)
                         {
-                            dac_set_volume(DAC_MAX_VOLUME - ( DAC_MAX_VOLUME / (cur_one->max) ) * (cur_one->value));
+                            //dac_set_volume(DAC_VOLUME_MASK -
+							//( DAC_VOLUME_MASK / (cur_one->max) ) * (cur_one->value)) ;
+                            dac_set_volume(dac_volume_caculate(cur_one->max, cur_one->value));
                        }
                        else
                        {
@@ -111,7 +114,9 @@ app_result_e volumebar_msg_deal(param_com_data_t *param_com, int8 timeup_id, uin
                     if ((mode == SET_VOLUME_LIMIT) || (mode == SET_VOLUME_VALUE))
                     {
                     	
-                    	dac_set_volume(DAC_MAX_VOLUME - ( DAC_MAX_VOLUME / (cur_one->max) ) * (cur_one->value));
+                    	//dac_set_volume(DAC_VOLUME_MASK -
+							//( DAC_VOLUME_MASK / (cur_one->max) ) * (cur_one->value)) ;
+                            dac_set_volume(dac_volume_caculate(cur_one->max, cur_one->value));
                     }
                     else
                     {

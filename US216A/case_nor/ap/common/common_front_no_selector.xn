@@ -1,34 +1,4 @@
-/**************************************************************************
-*                                                                         *
-*   PROJECT     : MIPS port for UCOS-II                                   *
-*                                                                         *
-*   MODULE      : control bank & ui bank link.xn                          *
-*                                                                         *
-*   AUTHOR      : lzcai                                                   *
-*                                                                         *
-*   PROCESSOR   : MIPS 4KEc (32 bit RISC) - Actions board                 *
-*                                                                         *
-*   Tool-chain  : Cygnus                                                  *
-*                                                                         *
-*                                                                         *
-*   Linker script file                                                    *
-*   规定：AP文件与com-子场景放在 CONTROL 组；com-功能接口放在 UI 组       *
-**************************************************************************/
-/************************common memory map*********************************
-*-------------------------------code--------------------------------------*
-*---bank UI      :(0x48**0000+0x1f600)-(0x48**0000+0x1fdff)  length:0x800 *
-*---bank UI xdata:(0x48**0200+0x1f800)-(0x48**0000+0x1fdff)  length:0x600 *
-*---bank control :(0x40**0000+0x1fe00)-(0x40**0000+0x205ff)  length:0x800 *
-*---说明                                                                  *
-*---1 ** 高6bit 为bank号，比如0x4841f600中0x41高6bit为0x10，故为 bank 16  *
-*---2 common中为了给bank UI段预留0x200的bank xdata，offset调整为 0x1f800，*
-*---  如不需要用到该xdata空间，起始位置仍然可以为 0x1f600                 *
-*-------------------------------data--------------------------------------*
-*--bank ui xdata      : 0x4841f600-0x4841f7ff                length:0x200 *
-*--bank control xdata : 0x40cdfe00-0x40cdffff                length:0x200 *
-*---说明                                                                  *
-*---1 ** bank control xdata 仅仅是 common gui_directory 控件使用          *
-***************************************************************************/
+
 
 /*定义GROUP BANK INDEX 和其他地址变量*/
 INPUT(link_base.xn)
@@ -63,10 +33,9 @@ EXTERN(dac_op_entry)
 SECTIONS
 {
     /* 常驻代码段: .text */
-    .text RCODE_TEXT_ADDR   : 
+     .text RCODE_TEXT_ADDR   : 
     {
     }
-
     /* 初始化了的全局数据段，紧跟在 .text段后面: .data */
     .data RDATA_DATA_ADDR   : AT(ADDR(.text) + SIZEOF(.text)) 
     {
@@ -76,14 +45,6 @@ SECTIONS
     .bss    :
     {
     }
-    
-    XDATA_BASE = BANK_CONTROL_1_ADDR_BASE + AP_BANK_SPACE * 51;
-    .XDATA_BANK_CONTROL_1_51 XDATA_BASE :
-    {
-        ui_directory.o(.xdata)
-        . = 0x200;
-    }
-    DIRECTORY_SIZE = BANK_CONTROL_SIZE - 0x200;
     
     XDATA_BASE = BANK_UI_1_ADDR_BASE + AP_BANK_SPACE * 16;
     .XDATA_BANK_UI_STR_BUFFER XDATA_BASE :
@@ -116,21 +77,9 @@ SECTIONS
         . = BANK_CONTROL_SIZE;
     }
     
-    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
-    BANK_CONTROL_1_51   : 
-    {
-        ui_directory.o(.text .rodata)
-        . = DIRECTORY_SIZE;
-    }
-    
-    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
-    BANK_CONTROL_1_52   : 
-    {
-        ui_directory2.o(.text .rodata .xdata)
-        . = DIRECTORY_SIZE;
-    }
-    
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;
+    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;/*跳过BANK_CONTROL_1_51*/
+    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;/*跳过BANK_CONTROL_1_52*/
     BANK_CONTROL_1_53   : 
     {
         ui_parameter.o(.text .rodata .xdata)
@@ -148,7 +97,6 @@ SECTIONS
     BANK_CONTROL_1_55   : 
     {
         setting_comval.o(.text .rodata .xdata)
-        common_setdae_init.o(.text .rodata .xdata)
         . = BANK_CONTROL_SIZE;
     }
     
@@ -168,7 +116,6 @@ SECTIONS
     BANK_UI_1_17    : 
     {
         app_timer_bank.o(.text .rodata .xdata)
-        ui_headbar.o(.text .rodata .xdata)        
         . = BANK_UI_RESERVE_SIZE;
     }
     
@@ -206,14 +153,15 @@ SECTIONS
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;
     BANK_UI_1_22    : 
     {
-        common_confmenu.o(.text .rodata .xdata)      
+        common_confmenu.o(.text .rodata .xdata)
+  
         . = BANK_UI_SIZE;
     }
     
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;
     BANK_UI_1_23    : 
     {
-        common_history.o(.text .rodata .xdata)
+        common_history.o(.text .rodata .xdata)      
         . = BANK_UI_SIZE;
     }
     
@@ -242,25 +190,20 @@ SECTIONS
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
     BANK_UI_1_27    : 
     {
-        common_sound.o(.text .rodata .xdata)
+        common_sound.o(.text .rodata .xdata)       
         . = BANK_UI_RESERVE_SIZE;
     }
     
-    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;
+    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
     BANK_UI_1_28    : 
     {
-        ui_directory_sub.o(.text .rodata .xdata)
-        . = BANK_UI_SIZE;
+        common_phy_volume_deal.o(.text .rodata .xdata)
+        common_phy_volume_table.o(.text .rodata .xdata)               
+        . = BANK_UI_RESERVE_SIZE;
     }
-    
+        
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;
-    BANK_UI_1_29    : 
-    {
-        ui_directory_sub2.o(.text .rodata .xdata)
-        . = BANK_UI_SIZE;
-    }
-    
-    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;
+    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET;/*跳过BANK_UI_1_29*/
     BANK_UI_1_30    : 
     {
         ui_menulist_sub.o(.text .rodata .xdata)
@@ -285,25 +228,13 @@ SECTIONS
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
     BANK_UI_1_33    : 
     {
-  /*      ui_headbar.o(.text .rodata .xdata)*/
+        ui_headbar.o(.text .rodata .xdata)
         . = BANK_UI_RESERVE_SIZE;
     }
     
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
-    BANK_UI_1_34    : 
-    {
-        ui_delete.o(.text .rodata .xdata)
-        . = BANK_UI_RESERVE_SIZE;
-    }
-    
-    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1)))  + OFFSET + 0x200;
-    BANK_UI_1_35    : 
-    {
-        ui_delete_sub.o(.text .rodata .xdata)
-        . = BANK_UI_RESERVE_SIZE;
-    }
-    
-    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
+    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;/*跳过BANK_UI_1_34*/
+    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;/*跳过BANK_UI_1_35*/
     BANK_UI_1_36    : 
     {
         ui_keylock.o(.text .rodata .xdata)
@@ -341,7 +272,6 @@ SECTIONS
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
     BANK_UI_1_41    : 
     {
-    	
         ui_volumebar.o(.text .rodata .xdata)
         . = BANK_UI_RESERVE_SIZE;
     }
@@ -378,9 +308,9 @@ SECTIONS
     
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
     BANK_UI_1_46    : 
-    { 
+    {
         sys_counter.o(.text .rodata .xdata)
-        common_charge.o(.text .rodata .xdata)        
+        common_charge.o(.text .rodata .xdata)
         ui_headbar_handle.o(.text .rodata .xdata)
         . = BANK_UI_RESERVE_SIZE;
     }
@@ -413,24 +343,24 @@ SECTIONS
         . = BANK_UI_RESERVE_SIZE;
     }
     
-    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1))) + OFFSET + 0x200;
+    . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1)))  + OFFSET + 0x200;
     BANK_UI_1_51    : 
     {
-        common_phy_volume_deal.o(.text .rodata .xdata)
-        common_phy_volume_table.o(.text .rodata .xdata)               
+        KEEP(common_setdae_init.o(.text .rodata .xdata))
         . = BANK_UI_RESERVE_SIZE;
     }
-
+    
     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1)))  + OFFSET;
     BANK_UI_1_52    : 
     {
         KEEP(common_keytone_play.o(.text .rodata .xdata))
         . = BANK_UI_SIZE;
-    }
-     . = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1)))  + OFFSET;
+    }  
+            
+		. = ((. + AP_BANK_SPACE) & (~(AP_BANK_SPACE - 1)))  + OFFSET;
     BANK_UI_1_53    : 
     {
-    		ui_volume_dac.o(.text .rodata .xdata)
-    		. = BANK_UI_RESERVE_SIZE;
+   		 ui_volume_dac.o(.text .rodata .xdata)
+   		 . = BANK_UI_SIZE;
     }
 }
